@@ -1,68 +1,93 @@
 #!/bin/bash
 
-# رنگ‌بندی برای نمایش بهتر پیام‌ها
-NC='\033[0m'           # رنگ برای نمایش معمولی
-RED='\033[0;31m'       # رنگ قرمز
-GREEN='\033[0;32m'     # رنگ سبز
-YELLOW='\033[0;33m'    # رنگ زرد
+# Function to ask for domain or IP
+ask_domain() {
+    read -p "Please enter your domain or IP (e.g., example.com or your_ip): " domain_or_ip
+    if [[ -z "$domain_or_ip" ]]; then
+        echo "You must enter a domain or IP address."
+        exit 1
+    fi
+}
 
-echo -e "${GREEN}Starting n8n Installation...${NC}"
+# Update system and install dependencies
+echo "Updating system and installing dependencies..."
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y curl gnupg2 lsb-release ca-certificates
 
-# بررسی دسترسی روت
-if [ "$EUID" -ne 0 ]; then
-    echo -e "${RED}Please run as root.${NC}"
-    exit
-fi
+# Install Node.js (n8n dependency)
+echo "Installing Node.js..."
+curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+sudo apt install -y nodejs
 
-# نصب پیش‌نیازها
-echo -e "${YELLOW}Installing dependencies...${NC}"
-sudo apt update -y
-sudo apt install -y curl docker.io docker-compose nginx
+# Install Docker (Optional but recommended for n8n)
+echo "Installing Docker..."
+sudo apt install -y docker.io
+sudo systemctl enable --now docker
 
-# فعال‌سازی و شروع Docker
-echo -e "${YELLOW}Enabling and starting Docker...${NC}"
-sudo systemctl enable docker
-sudo systemctl start docker
+# Install n8n
+echo "Installing n8n..."
+sudo npm install -g n8n
 
-# دانلود و راه‌اندازی کانتینر n8n
-echo -e "${YELLOW}Setting up n8n container...${NC}"
-docker run -d \
-  --name n8n \
-  -p 5678:5678 \
-  -e N8N_HOST=localhost \
-  -e N8N_PORT=5678 \
-  -e N8N_PROTOCOL=http \
-  -e N8N_BASIC_AUTH_ACTIVE=false \
-  -v ~/.n8n:/home/node/.n8n \
-  n8nio/n8n
+# Ask for domain or IP
+ask_domain
 
-# راه‌اندازی Nginx برای دسترسی به n8n
-echo -e "${YELLOW}Setting up Nginx...${NC}"
-cat <<EOL | sudo tee /etc/nginx/sites-available/n8n
+# Set up n8n as a systemd service
+echo "Setting up n8n as a systemd service..."
+sudo bash -c 'cat > /etc/systemd/system/n8n.service <<EOF
+[Unit]
+Description=n8n - Workflow Automation Tool
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/n8n
+Restart=always
+User=root
+Environment="N8N_BASIC_AUTH_ACTIVE=true"
+Environment="N8N_BASIC_AUTH_USER=admin"
+Environment="N8N_BASIC_AUTH_PASSWORD=password"
+Environment="N8N_HOST='"$domain_or_ip"'"
+Environment="N8N_PORT=5678"
+Environment="N8N_PROTOCOL=http"
+Environment="N8N_SECURITY_COOKIE=true"
+
+[Install]
+WantedBy=multi-user.target
+EOF'
+
+# Reload systemd to pick up the new service and start n8n
+echo "Reloading systemd and starting n8n..."
+sudo systemctl daemon-reload
+sudo systemctl start n8n
+sudo systemctl enable n8n
+
+# Install Nginx for reverse proxy
+echo "Installing Nginx and setting up reverse proxy..."
+sudo apt install -y nginx
+sudo systemctl enable nginx
+sudo systemctl start nginx
+
+# Configure Nginx to reverse proxy n8n
+sudo bash -c 'cat > /etc/nginx/sites-available/n8n <<EOF
 server {
     listen 80;
-
-    server_name ${1:-localhost};  # اگر دامنه داده نشد، از localhost استفاده می‌کند
+    server_name '"$domain_or_ip"';
 
     location / {
-        proxy_pass http://localhost:5678;
+        proxy_pass http://127.0.0.1:5678;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
-EOL
+EOF'
 
-# فعال کردن سایت در Nginx
+# Enable the Nginx site and restart Nginx
 sudo ln -s /etc/nginx/sites-available/n8n /etc/nginx/sites-enabled/
-
-# راه‌اندازی مجدد سرویس Nginx
-echo -e "${YELLOW}Restarting Nginx...${NC}"
+sudo nginx -t
 sudo systemctl restart nginx
 
-# نمایش آدرس دسترسیی
-echo -e "${GREEN}n8n installed successfully! Access it via http://<your_ip_or_domain>:5678${NC}"
-
-# کپی‌رایت
-echo -e "${YELLOW}Installation Script by FamaServer (c) 2025${NC}"
+# Inform the user
+echo "n8n installation completed successfully!"
+echo "You can access n8n at http://$domain_or_ip:5678"
+echo "Installation Script by FamaServer (c) 2025"
