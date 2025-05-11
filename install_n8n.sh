@@ -61,7 +61,7 @@ sudo ln -s /etc/nginx/sites-available/n8n /etc/nginx/sites-enabled/
 echo -e "${YELLOW}Restarting Nginx...${NC}"
 sudo systemctl restart nginx
 
-# نمایش آدرس دسترسی
+# نمایش آدرس دسترسیی
 echo -e "${GREEN}n8n installed successfully! Access it via http://<your_ip_or_domain>:5678${NC}"
 
 # کپی‌رایت
