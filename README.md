@@ -31,8 +31,9 @@ This script installs [n8n](https://n8n.io) on a fresh Ubuntu 22.04 or 24.04 serv
 ### With Domain:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/famaserver/n8n-autoinstall/main/install_n8n.sh | bash
+curl -sL https://raw.githubusercontent.com/famaserver/n8n-autoinstall/main/install_n8n.sh | bash
 
+```bash
 After install:
 http://YOUR_SERVER_IP:5678
 http://YOUR_DOMIN:5678
