@@ -39,5 +39,4 @@ passwd:set the first login from admin
 ### With Domain:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/famaserver/n8n-autoinstall/main/install_n8n.sh | bash
-
+bash <(curl -s https://raw.githubusercontent.com/famaserver/n8n-autoinstall/main/install_n8n.sh)
