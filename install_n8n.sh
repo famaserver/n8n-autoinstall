@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Function to ask for domain or IP
+# Ask for domain or IP
 ask_domain() {
     read -p "Please enter your domain or IP (e.g., example.com or your_ip): " domain_or_ip
     if [[ -z "$domain_or_ip" ]]; then
@@ -9,10 +9,18 @@ ask_domain() {
     fi
 }
 
+# Ask for port if needed
+ask_port() {
+    read -p "Please enter the port you want to use (default 5678): " port
+    if [[ -z "$port" ]]; then
+        port=5678
+    fi
+}
+
 # Update system and install dependencies
 echo "Updating system and installing dependencies..."
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y curl gnupg2 lsb-release ca-certificates
+sudo apt install -y curl gnupg2 lsb-release ca-certificates nginx
 
 # Install Node.js (n8n dependency)
 echo "Installing Node.js..."
@@ -31,6 +39,9 @@ sudo npm install -g n8n
 # Ask for domain or IP
 ask_domain
 
+# Ask for port
+ask_port
+
 # Set up n8n as a systemd service
 echo "Setting up n8n as a systemd service..."
 sudo bash -c 'cat > /etc/systemd/system/n8n.service <<EOF
@@ -46,7 +57,7 @@ Environment="N8N_BASIC_AUTH_ACTIVE=true"
 Environment="N8N_BASIC_AUTH_USER=admin"
 Environment="N8N_BASIC_AUTH_PASSWORD=password"
 Environment="N8N_HOST='"$domain_or_ip"'"
-Environment="N8N_PORT=5678"
+Environment="N8N_PORT='"$port"'"
 Environment="N8N_PROTOCOL=http"
 Environment="N8N_SECURITY_COOKIE=true"
 
@@ -60,20 +71,15 @@ sudo systemctl daemon-reload
 sudo systemctl start n8n
 sudo systemctl enable n8n
 
-# Install Nginx for reverse proxy
-echo "Installing Nginx and setting up reverse proxy..."
-sudo apt install -y nginx
-sudo systemctl enable nginx
-sudo systemctl start nginx
-
-# Configure Nginx to reverse proxy n8n
+# Configure Nginx as reverse proxy
+echo "Configuring Nginx as reverse proxy for n8n..."
 sudo bash -c 'cat > /etc/nginx/sites-available/n8n <<EOF
 server {
     listen 80;
     server_name '"$domain_or_ip"';
 
     location / {
-        proxy_pass http://127.0.0.1:5678;
+        proxy_pass http://127.0.0.1:'"$port"';
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -89,5 +95,5 @@ sudo systemctl restart nginx
 
 # Inform the user
 echo "n8n installation completed successfully!"
-echo "You can access n8n at http://$domain_or_ip:5678"
+echo "You can access n8n at http://$domain_or_ip:$port"
 echo "Installation Script by FamaServer (c) 2025"
