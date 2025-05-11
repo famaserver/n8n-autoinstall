@@ -1,14 +1,13 @@
 #!/bin/bash
 
-echo -e "\033[1;32m
-███████╗ █████╗ ███╗   ███╗ █████╗
-██╔════╝██╔══██╗████╗ ████║██╔══██╗
-█████╗  ███████║██╔████╔██║███████║
-██╔══╝  ██╔══██║██║╚██╔╝██║██╔══██║
-██║     ██║  ██║██║ ╚═╝ ██║██║  ██║
-╚═╝     ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝
-\033[0m"
-echo -e "\033[1;32mInstallation Script for n8n - FamaServer.com (c) 2025\033[0m"
+# Introduction with FamaServer Branding
+echo "███████╗ █████╗ ███╗   ███╗ █████╗"
+echo "██╔════╝██╔══██╗████╗ ████║██╔══██╗"
+echo "█████╗  ███████║██╔████╔██║███████║"
+echo "██╔══╝  ██╔══██║██║╚██╔╝██║██╔══██║"
+echo "██║     ██║  ██║██║ ╚═╝ ██║██║  ██║"
+echo "╚═╝     ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝"
+echo "Installation Script for n8n - FamaServer (c) 2025"
 
 # Ask for domain or IP
 read -p "Enter your domain (e.g. yourdomain.com) or IP address (e.g. 192.168.1.1): " server_address
