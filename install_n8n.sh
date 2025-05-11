@@ -1,117 +1,90 @@
 #!/bin/bash
 
-# Show intro with ASCII Art before starting installation
+# نمایش لوگوی FamaServer به صورت ASCII
 clear
-echo "**********************************************************************"
-echo "*                                                                    *"
-echo "*          FFFFFFFFFF    AAAAA   MMMMM   AAAAA  SSSSSS  EEEEE      *"
-echo "*          FF           AA   AA  MM  MM  AA   AA SS       EE        *"
-echo "*          FFFFFFF      AAAAAAA  MM  MM  AAAAAAA  SSSSS    EEEE      *"
-echo "*          FF           AA   AA  MM  MM  AA   AA      SS   EE        *"
-echo "*          FF           AA   AA  MM  MM  AA   AA  SSSSSS   EEEEE      *"
-echo "*                                                                    *"
-echo "*                            FAMASERVER.COM                          *"
-echo "*                                                                    *"
-echo "**********************************************************************"
-echo ""
-echo "Welcome to the installation script for n8n. Please wait while we set everything up..."
-echo ""
-sleep 5  # Add a small delay before starting the installation
+echo -e "\033[1;34m
+   ______         ______            ______                 
+  / ____/____    / ____/___  ____  / ____/___  ____ ______
+ / / __/ ___/   / / __/ __ \/ __ \/ / __/ __ \/ __ \`/ ___/
+ \____/ /__    / /_/ /_/ / /_/ / /_/ /_/ /_/ / /_/ / /__  
+ /_/    \___/   \____/\____/ .___/ .___/\____/\____/\___/  
+                         /_/    /_/                          
+\033[0m"
+echo -e "\033[1;32m
+Installation Script for n8n - FamaServer (c) 2025
+\033[0m"
 
-# Ask for domain or IP
-ask_domain() {
-    read -p "Please enter your domain or IP (e.g., example.com or your_ip): " domain_or_ip
-    if [[ -z "$domain_or_ip" ]]; then
-        echo "You must enter a domain or IP address."
-        exit 1
-    fi
-}
+# دریافت دامنه یا IP از کاربر
+read -p "Enter your domain or IP (e.g., yourdomain.com or 65.21.118.76): " HOST
 
-# Ask for port if needed
-ask_port() {
-    read -p "Please enter the port you want to use (default 5678): " port
-    if [[ -z "$port" ]]; then
-        port=5678
-    fi
-}
+# چک کردن که آیا دامنه یا IP وارد شده است
+if [ -z "$HOST" ]; then
+  echo "Error: You must provide a domain or IP address."
+  exit 1
+fi
 
-# Update system and install dependencies
-echo "Updating system and installing dependencies..."
+echo -e "\033[1;32mUsing IP/Domain: $HOST\033[0m"
+
+# تولید پسورد رندوم برای دسترسی به N8N
+PASSWORD=$(openssl rand -base64 16)
+
+echo -e "\033[1;32mGenerated password: $PASSWORD\033[0m"
+
+# نصب پیش‌نیازها
+echo -e "\033[1;32mInstalling required packages...\033[0m"
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y curl gnupg2 lsb-release ca-certificates nginx
+sudo apt install -y curl gnupg2 lsb-release ca-certificates docker.io nginx
 
-# Install Node.js (n8n dependency)
-echo "Installing Node.js..."
-curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
-sudo apt install -y nodejs
+# راه‌اندازی Docker
+echo -e "\033[1;32mStarting Docker service...\033[0m"
+sudo systemctl enable docker
+sudo systemctl start docker
 
-# Install Docker (Optional but recommended for n8n)
-echo "Installing Docker..."
-sudo apt install -y docker.io
-sudo systemctl enable --now docker
+# دانلود و راه‌اندازی n8n در Docker
+echo -e "\033[1;32mSetting up n8n...\033[0m"
+sudo docker run -d \
+  --name n8n \
+  -p 5678:5678 \
+  --env N8N_BASIC_AUTH_ACTIVE=true \
+  --env N8N_BASIC_AUTH_USER=admin \
+  --env N8N_BASIC_AUTH_PASSWORD=$PASSWORD \
+  --env N8N_SECURE_COOKIE=false \
+  n8nio/n8n
 
-# Install n8n
-echo "Installing n8n..."
-sudo npm install -g n8n
-
-# Ask for domain or IP
-ask_domain
-
-# Ask for port
-ask_port
-
-# Set up n8n as a systemd service
-echo "Setting up n8n as a systemd service..."
-sudo bash -c 'cat > /etc/systemd/system/n8n.service <<EOF
-[Unit]
-Description=n8n - Workflow Automation Tool
-After=network.target
-
-[Service]
-ExecStart=/usr/bin/n8n
-Restart=always
-User=root
-Environment="N8N_BASIC_AUTH_ACTIVE=true"
-Environment="N8N_BASIC_AUTH_USER=admin"
-Environment="N8N_BASIC_AUTH_PASSWORD=password"
-Environment="N8N_HOST='"$domain_or_ip"'"
-Environment="N8N_PORT='"$port"'"
-Environment="N8N_PROTOCOL=http"
-Environment="N8N_SECURITY_COOKIE=true"
-
-[Install]
-WantedBy=multi-user.target
-EOF'
-
-# Reload systemd to pick up the new service and start n8n
-echo "Reloading systemd and starting n8n..."
-sudo systemctl daemon-reload
-sudo systemctl start n8n
-sudo systemctl enable n8n
-
-# Configure Nginx as reverse proxy
-echo "Configuring Nginx as reverse proxy for n8n..."
-sudo bash -c 'cat > /etc/nginx/sites-available/n8n <<EOF
+# پیکربندی Nginx برای هدایت به Docker
+echo -e "\033[1;32mConfiguring Nginx...\033[0m"
+sudo bash -c "cat > /etc/nginx/sites-available/n8n <<EOF
 server {
     listen 80;
-    server_name '"$domain_or_ip"';
+    server_name $HOST;
 
     location / {
-        proxy_pass http://127.0.0.1:'"$port"';
+        proxy_pass http://localhost:5678;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
-EOF'
+EOF"
 
-# Enable the Nginx site and restart Nginx
+# فعال کردن پیکربندی Nginx
 sudo ln -s /etc/nginx/sites-available/n8n /etc/nginx/sites-enabled/
 sudo nginx -t
+
+# راه‌اندازی مجدد Nginx
+echo -e "\033[1;32mRestarting Nginx...\033[0m"
 sudo systemctl restart nginx
 
-# Inform the user
-echo "n8n installation completed successfully!"
-echo "You can access n8n at http://$domain_or_ip:$port"
-echo "Installation Script by FamaServer (c) 2025"
+# نمایش پیام موفقیت
+echo -e "\033[1;32mn8n has been successfully installed!\033[0m"
+echo -e "\033[1;33mYou can now access n8n via: http://$HOST:5678\033[0m"
+echo -e "\033[1;32mInstallation Script by FamaServer (c) 2025\033[0m"
+
+# نمایش اطلاعات ورود
+echo -e "\033[1;34mAccess Details:\033[0m"
+echo -e "\033[1;32mUsername: admin\033[0m"
+echo -e "\033[1;32mPassword: $PASSWORD\033[0m"
+
+# پایان نصب
+exit 0
