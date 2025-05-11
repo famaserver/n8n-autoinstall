@@ -1,54 +1,43 @@
 #!/bin/bash
 
-# Introduction with FamaServer Branding
-echo "███████╗ █████╗ ███╗   ███╗ █████╗"
-echo "██╔════╝██╔══██╗████╗ ████║██╔══██╗"
-echo "█████╗  ███████║██╔████╔██║███████║"
-echo "██╔══╝  ██╔══██║██║╚██╔╝██║██╔══██║"
-echo "██║     ██║  ██║██║ ╚═╝ ██║██║  ██║"
-echo "╚═╝     ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝"
-echo "Installation Script for n8n - FamaServer (c) 2025"
+read -rp "Enter your domain (e.g. example.com) or IP address (e.g. 1.2.3.4): " server_address
 
-# Ask for domain or IP
-read -p "Enter your domain (e.g. yourdomain.com) or IP address (e.g. 192.168.1.1): " server_address
-
-# Check if domain/IP is empty
-if [ -z "$server_address" ]; then
+if [[ -z "$server_address" ]]; then
   echo "Error: You must provide a domain or IP address."
   exit 1
 fi
 
-# If domain is provided, append http:// to it, if IP is provided, leave it as is
-if [[ "$server_address" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "Using IP address: http://$server_address"
-  n8n_url="http://$server_address"
-else
-  echo "Using domain: http://$server_address"
-  n8n_url="http://$server_address"
+# تولید پسورد رندوم
+admin_password=$(openssl rand -hex 12)
+
+# نصب Docker اگر نصب نیست
+if ! command -v docker &> /dev/null; then
+  apt update && apt install -y curl
+  curl -fsSL https://get.docker.com | sh
 fi
 
-# Installing required dependencies
-echo "Installing required dependencies..."
-sudo apt update
-sudo apt install -y docker.io curl
+# ساخت دایرکتوری داده n8n
+mkdir -p /root/n8n/.n8n
 
-# Pull the n8n Docker image
-echo "Pulling the n8n Docker image..."
-sudo docker pull n8nio/n8n
-
-# Run the n8n container
-echo "Running n8n container..."
-sudo docker run -d \
+# اجرای کانتینر n8n
+docker run -d \
   --name n8n \
   -p 5678:5678 \
-  --env N8N_BASIC_AUTH_ACTIVE=true \
-  --env N8N_BASIC_AUTH_USER=admin \
-  --env N8N_BASIC_AUTH_PASSWORD=$(openssl rand -base64 12) \
+  -v /root/n8n/.n8n:/home/node/.n8n \
+  -e N8N_BASIC_AUTH_ACTIVE=true \
+  -e N8N_BASIC_AUTH_USER=admin \
+  -e N8N_BASIC_AUTH_PASSWORD="$admin_password" \
+  -e N8N_HOST="$server_address" \
+  -e N8N_PORT=5678 \
+  -e N8N_PROTOCOL=http \
+  -e N8N_SECURE_COOKIE=false \
+  --restart unless-stopped \
   n8nio/n8n
 
-# Provide success message with credentials
-echo "n8n installation completed!"
-echo "You can access n8n at: $n8n_url:5678"
-echo "Login using the following credentials:"
-echo "Username: admin"
-echo "Password: $(openssl rand -base64 12)"
+echo ""
+echo "✅ n8n installation completed!"
+echo "🔗 Access URL: http://$server_address:5678"
+echo "👤 Username: admin"
+echo "🔒 Password: $admin_password"
+echo ""
+echo "📦 FamaServer (c) 2025 - All rights reserved"
