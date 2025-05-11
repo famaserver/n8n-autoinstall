@@ -1,76 +1,30 @@
 #!/bin/bash
-# install_n8n.sh - Auto installer for n8n with domain/IP support
-# (c) 2025 FamaServer - https://famaserver.com
 
-set -e
+# نمایش پیغام ابتدایی
+echo "Installing n8n..."
 
-# Prompt for domain or IP
-read -p "Enter your domain (or press Enter to use server IP): " DOMAIN
+# نصب پیش‌نیازها
+sudo apt-get update && sudo apt-get install -y docker.io curl sudo
 
-if [ -z "$DOMAIN" ]; then
-    DOMAIN=$(curl -s http://checkip.amazonaws.com)
-    if [ -z "$DOMAIN" ]; then
-        echo "Error: Could not detect server IP. Please specify a domain or IP."
-        exit 1
-    fi
-fi
+# راه‌اندازی Docker
+sudo systemctl enable --now docker
 
-# Generate random password
-PASSWORD=$(openssl rand -base64 12)
+# دانلود و اجرای n8n با Docker و دور زدن ارور HTTP
+sudo docker run -d \
+  --name n8n \
+  -p 5678:5678 \
+  --env N8N_BASIC_AUTH_ACTIVE=true \
+  --env N8N_BASIC_AUTH_USER=admin \
+  --env N8N_BASIC_AUTH_PASSWORD=$(openssl rand -base64 12) \
+  --env N8N_SECURE_COOKIE=false \
+  n8nio/n8n
 
-# Install Docker & Docker Compose if not installed
-if ! command -v docker &> /dev/null; then
-    echo "Installing Docker..."
-    curl -fsSL https://get.docker.com | bash
-fi
+# نمایش آدرس، نام کاربری و پسورد
+IP_ADDRESS=$(hostname -I | awk '{print $1}')
+PASSWORD=$(docker exec -it n8n printenv N8N_BASIC_AUTH_PASSWORD)
 
-# Install Nginx if not installed
-if ! command -v nginx &> /dev/null; then
-    echo "Installing Nginx..."
-    apt update && apt install -y nginx
-fi
-
-# Run n8n container
-if [ ! $(docker ps -q -f name=n8n) ]; then
-    docker run -d \
-        --name n8n \
-        -p 5678:5678 \
-        --env N8N_BASIC_AUTH_ACTIVE=true \
-        --env N8N_BASIC_AUTH_USER=admin \
-        --env N8N_BASIC_AUTH_PASSWORD=$PASSWORD \
-        --env N8N_HOST=$DOMAIN \
-        --env N8N_PORT=5678 \
-        --env WEBHOOK_TUNNEL_URL=http://$DOMAIN \
-        --env N8N_PROTOCOL=http \
-        --env N8N_SECURE_COOKIE=false \
-        n8nio/n8n
-fi
-
-# Create Nginx config
-NGINX_CONF=/etc/nginx/sites-available/n8n
-
-cat > $NGINX_CONF <<EOF
-server {
-    listen 80;
-    server_name $DOMAIN;
-
-    location / {
-        proxy_pass http://localhost:5678;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-}
-EOF
-
-ln -sf $NGINX_CONF /etc/nginx/sites-enabled/n8n
-nginx -t && systemctl reload nginx
-
-# Output access info
-echo "\n========================================"
-echo "✅ n8n نصب شد با موفقیت!"
-echo "📍 آدرس: http://$DOMAIN"
-echo "👤 یوزرنیم: admin"
-echo "🔑 پسورد: $PASSWORD"
-echo "========================================"
+# رنگ سبز برای موفقیت
+echo -e "\033[32mInstallation successful!\033[0m"
+echo -e "\033[32mAccess n8n at: http://$IP_ADDRESS:5678\033[0m"
+echo -e "\033[32mUsername: admin\033[0m"
+echo -e "\033[32mPassword: $PASSWORD\033[0m"
