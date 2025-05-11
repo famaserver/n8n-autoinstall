@@ -24,12 +24,12 @@ This script installs [n8n](https://n8n.io) on a fresh Ubuntu 22.04 or 24.04 serv
 - Ubuntu 22.04 LTS
 - Ubuntu 24.04 LTS
 ---
-After install:
-http://YOUR_SERVER_IP:5678
-http://YOUR_DOMIN:5678
+After install:<br>
+http://YOUR_SERVER_IP:5678<br>
+http://YOUR_DOMIN:5678<br>
 ---
-Default Login:
-Username: admin
+Default Login:<br>
+Username: admin<br>
 passwd:set the first login from admin
 
 ---
