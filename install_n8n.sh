@@ -1,5 +1,23 @@
 #!/bin/bash
 
+# Show intro with ASCII Art before starting installation
+clear
+echo "**********************************************************************"
+echo "*                                                                    *"
+echo "*          FFFFFFFFFF    AAAAA   MMMMM   AAAAA  SSSSSS  EEEEE      *"
+echo "*          FF           AA   AA  MM  MM  AA   AA SS       EE        *"
+echo "*          FFFFFFF      AAAAAAA  MM  MM  AAAAAAA  SSSSS    EEEE      *"
+echo "*          FF           AA   AA  MM  MM  AA   AA      SS   EE        *"
+echo "*          FF           AA   AA  MM  MM  AA   AA  SSSSSS   EEEEE      *"
+echo "*                                                                    *"
+echo "*                            FAMASERVER.COM                          *"
+echo "*                                                                    *"
+echo "**********************************************************************"
+echo ""
+echo "Welcome to the installation script for n8n. Please wait while we set everything up..."
+echo ""
+sleep 5  # Add a small delay before starting the installation
+
 # Ask for domain or IP
 ask_domain() {
     read -p "Please enter your domain or IP (e.g., example.com or your_ip): " domain_or_ip
