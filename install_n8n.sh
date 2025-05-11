@@ -1,25 +1,23 @@
 #!/bin/bash
 
-# نمایش لوگوی FamaServer به صورت ASCII
+# نمایش لوگوی ساده FamaServer
 clear
-echo -e "\033[1;34m
-   ______         ______            ______                 
-  / ____/____    / ____/___  ____  / ____/___  ____ ______
- / / __/ ___/   / / __/ __ \/ __ \/ / __/ __ \/ __ \`/ ___/
- \____/ /__    / /_/ /_/ / /_/ / /_/ /_/ /_/ / /_/ / /__  
- /_/    \___/   \____/\____/ .___/ .___/\____/\____/\___/  
-                         /_/    /_/                          
-\033[0m"
 echo -e "\033[1;32m
-Installation Script for n8n - FamaServer (c) 2025
+███████╗ █████╗ ███╗   ███╗ █████╗
+██╔════╝██╔══██╗████╗ ████║██╔══██╗
+█████╗  ███████║██╔████╔██║███████║
+██╔══╝  ██╔══██║██║╚██╔╝██║██╔══██║
+██║     ██║  ██║██║ ╚═╝ ██║██║  ██║
+╚═╝     ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝
 \033[0m"
+echo -e "\033[1;32mInstallation Script for n8n - FamaServer (c) 2025\033[0m"
 
 # دریافت دامنه یا IP از کاربر
 read -p "Enter your domain or IP (e.g., yourdomain.com or 65.21.118.76): " HOST
 
 # چک کردن که آیا دامنه یا IP وارد شده است
 if [ -z "$HOST" ]; then
-  echo "Error: You must provide a domain or IP address."
+  echo -e "\033[1;31mError: You must provide a domain or IP address.\033[0m"
   exit 1
 fi
 
